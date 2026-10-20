@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 
 	"idips/internal/app"
+	"idips/internal/logstream"
 )
 
 func main() {
@@ -34,12 +36,13 @@ func main() {
 	default:
 		level.Set(slog.LevelInfo)
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	logs := logstream.New(500)
+	logger := slog.New(slog.NewTextHandler(io.MultiWriter(os.Stderr, logs), &slog.HandlerOptions{Level: level}))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	a, err := app.New(ctx, *dataDir, logger, level)
+	a, err := app.New(ctx, *dataDir, logger, level, logs)
 	if err != nil {
 		logger.Error("initialization failed", "error", err)
 		os.Exit(1)

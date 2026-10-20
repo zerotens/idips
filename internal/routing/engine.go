@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -11,11 +12,19 @@ import (
 
 	"github.com/oschwald/geoip2-golang"
 
+	"idips/internal/iptoasn"
 	"idips/internal/model"
 	"idips/internal/store"
 )
 
 var regexCache sync.Map
+
+type IPInfo struct {
+	IP      string
+	ASN     uint32
+	Country string
+	Org     string
+}
 
 type Decision struct {
 	Action       string
@@ -33,15 +42,17 @@ type Engine struct {
 	geoMu    sync.RWMutex
 	city     *geoip2.Reader
 	asn      *geoip2.Reader
+	tsv      *iptoasn.DB
 	cityPath string
 	asnPath  string
+	tsvPath  string
 }
 
 func New(st *store.Store, log *slog.Logger) *Engine {
 	return &Engine{store: st, log: log}
 }
 
-func (e *Engine) ReloadGeo(cityPath, asnPath string) error {
+func (e *Engine) ReloadGeo(cityPath, asnPath, tsvPath string) error {
 	e.geoMu.Lock()
 	defer e.geoMu.Unlock()
 	if e.city != nil {
@@ -52,22 +63,36 @@ func (e *Engine) ReloadGeo(cityPath, asnPath string) error {
 		_ = e.asn.Close()
 		e.asn = nil
 	}
-	e.cityPath, e.asnPath = cityPath, asnPath
+	e.tsv = nil
+	e.cityPath, e.asnPath, e.tsvPath = cityPath, asnPath, tsvPath
+
+	var errs []error
 	if cityPath != "" {
 		r, err := geoip2.Open(cityPath)
 		if err != nil {
-			return fmt.Errorf("open GeoIP city db: %w", err)
+			errs = append(errs, fmt.Errorf("open GeoIP city db: %w", err))
+		} else {
+			e.city = r
 		}
-		e.city = r
 	}
 	if asnPath != "" {
 		r, err := geoip2.Open(asnPath)
 		if err != nil {
-			return fmt.Errorf("open GeoIP ASN db: %w", err)
+			errs = append(errs, fmt.Errorf("open GeoIP ASN db: %w", err))
+		} else {
+			e.asn = r
 		}
-		e.asn = r
 	}
-	return nil
+	if tsvPath != "" {
+		db, err := iptoasn.Open(tsvPath)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("open IPtoASN db: %w", err))
+		} else {
+			e.tsv = db
+			e.log.Info("IPtoASN database loaded", "path", tsvPath, "ranges", db.Len())
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (e *Engine) Close() {
@@ -81,6 +106,49 @@ func (e *Engine) Close() {
 		_ = e.asn.Close()
 		e.asn = nil
 	}
+	e.tsv = nil
+}
+
+func (e *Engine) LookupIP(ip net.IP) (IPInfo, bool) {
+	if ip == nil {
+		return IPInfo{}, false
+	}
+	e.geoMu.RLock()
+	tsv := e.tsv
+	city := e.city
+	asnDB := e.asn
+	e.geoMu.RUnlock()
+
+	info := IPInfo{IP: ip.String()}
+	found := false
+	if tsv != nil {
+		if rec, ok := tsv.Lookup(ip); ok {
+			info.ASN, info.Country, info.Org = rec.ASN, rec.Country, rec.Org
+			found = found || rec.ASN != 0 || rec.Country != "" || rec.Org != ""
+		}
+	}
+	if asnDB != nil && (info.ASN == 0 || info.Org == "") {
+		if rec, err := asnDB.ASN(ip); err == nil && rec != nil {
+			if info.ASN == 0 {
+				info.ASN = uint32(rec.AutonomousSystemNumber)
+			}
+			if info.Org == "" {
+				info.Org = rec.AutonomousSystemOrganization
+			}
+			found = found || info.ASN != 0 || info.Org != ""
+		}
+	}
+	if city != nil && info.Country == "" {
+		if rec, err := city.Country(ip); err == nil && rec != nil {
+			code := rec.Country.IsoCode
+			if code == "" {
+				code = rec.RegisteredCountry.IsoCode
+			}
+			info.Country = code
+			found = found || code != ""
+		}
+	}
+	return info, found
 }
 
 func (e *Engine) Decide(host string, ips []net.IP, clientIP net.IP, port int) (Decision, error) {
@@ -262,9 +330,10 @@ func matchPortList(raw string, port int) bool {
 
 func (e *Engine) matchGeo(raw string, ips []net.IP) bool {
 	e.geoMu.RLock()
+	tsv := e.tsv
 	db := e.city
 	e.geoMu.RUnlock()
-	if db == nil || len(ips) == 0 {
+	if (tsv == nil && db == nil) || len(ips) == 0 {
 		return false
 	}
 	wanted := make(map[string]struct{})
@@ -278,13 +347,23 @@ func (e *Engine) matchGeo(raw string, ips []net.IP) bool {
 		if ip == nil {
 			continue
 		}
-		rec, err := db.Country(ip)
-		if err != nil || rec == nil {
-			continue
+		code := ""
+		if tsv != nil {
+			if rec, ok := tsv.Lookup(ip); ok {
+				code = rec.Country
+			}
 		}
-		code := rec.Country.IsoCode
+		if code == "" && db != nil {
+			rec, err := db.Country(ip)
+			if err == nil && rec != nil {
+				code = rec.Country.IsoCode
+				if code == "" {
+					code = rec.RegisteredCountry.IsoCode
+				}
+			}
+		}
 		if code == "" {
-			code = rec.RegisteredCountry.IsoCode
+			continue
 		}
 		if _, ok := wanted[strings.ToUpper(code)]; ok {
 			return true
@@ -295,30 +374,43 @@ func (e *Engine) matchGeo(raw string, ips []net.IP) bool {
 
 func (e *Engine) matchASN(raw string, ips []net.IP) bool {
 	e.geoMu.RLock()
+	tsv := e.tsv
 	db := e.asn
 	e.geoMu.RUnlock()
-	if db == nil || len(ips) == 0 {
+	if (tsv == nil && db == nil) || len(ips) == 0 {
 		return false
 	}
-	wanted := make(map[uint]struct{})
+	wanted := make(map[uint32]struct{})
 	for _, p := range strings.Split(raw, ",") {
 		p = strings.TrimSpace(strings.TrimPrefix(strings.ToUpper(p), "AS"))
 		if p == "" {
 			continue
 		}
 		if n, err := strconv.ParseUint(p, 10, 32); err == nil {
-			wanted[uint(n)] = struct{}{}
+			wanted[uint32(n)] = struct{}{}
 		}
 	}
 	for _, ip := range ips {
 		if ip == nil {
 			continue
 		}
-		rec, err := db.ASN(ip)
-		if err != nil || rec == nil {
+		var asn uint32
+		found := false
+		if tsv != nil {
+			if rec, ok := tsv.Lookup(ip); ok && rec.ASN != 0 {
+				asn, found = rec.ASN, true
+			}
+		}
+		if !found && db != nil {
+			rec, err := db.ASN(ip)
+			if err == nil && rec != nil {
+				asn, found = uint32(rec.AutonomousSystemNumber), true
+			}
+		}
+		if !found {
 			continue
 		}
-		if _, ok := wanted[uint(rec.AutonomousSystemNumber)]; ok {
+		if _, ok := wanted[asn]; ok {
 			return true
 		}
 	}

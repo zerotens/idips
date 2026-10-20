@@ -44,9 +44,31 @@ jobs:
       - name: Lint Helm chart
         run: helm lint deploy/helm/idips
 
+  database:
+    name: Fetch IPtoASN database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download database
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 5 \
+            https://iptoasn.com/data/ip2asn-combined.tsv.gz \
+            -o ip2asn-combined.tsv.gz
+          gzip -t ip2asn-combined.tsv.gz
+          ls -lh ip2asn-combined.tsv.gz
+
+      - name: Upload database
+        uses: actions/upload-artifact@v7
+        with:
+          name: iptoasn-database
+          path: ip2asn-combined.tsv.gz
+          if-no-files-found: error
+
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-    needs: verify
+    needs:
+      - verify
+      - database
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -72,6 +94,12 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Download IPtoASN database
+        uses: actions/download-artifact@v8
+        with:
+          name: iptoasn-database
+          path: .
+
       - name: Build and package
         env:
           GOOS: ${{ matrix.goos }}
@@ -92,7 +120,7 @@ jobs:
           go build -trimpath -buildvcs=false \
             -ldflags "-s -w -X idips/internal/app.Version=${VERSION}" \
             -o "$stage/${binary}" ./cmd/idips
-          cp LICENSE README.md "$stage"/
+          cp LICENSE README.md ip2asn-combined.tsv.gz "$stage"/
 
           if [[ "$GOOS" == "windows" ]]; then
             (cd dist && zip -qr "${package}.zip" "${package}")
@@ -182,6 +210,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.ref_name }}
+            IPTOASN_CACHE_BUST=${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: true

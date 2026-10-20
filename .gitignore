@@ -32,3 +32,6 @@ coverage.*
 *.swo
 .DS_Store
 Thumbs.db
+
+# Bundled IPtoASN database (downloaded by build/release)
+/ip2asn-combined.tsv.gz

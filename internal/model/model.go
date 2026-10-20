@@ -109,6 +109,7 @@ type Settings struct {
 	HealthTarget          string `json:"health_target"`
 	GeoIPCityDB           string `json:"geoip_city_db"`
 	GeoIPASNDB            string `json:"geoip_asn_db"`
+	GeoIPTSV              string `json:"geoip_tsv"`
 	APIToken              string `json:"api_token"`
 	LogLevel              string `json:"log_level"`
 }

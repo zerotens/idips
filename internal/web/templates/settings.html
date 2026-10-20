@@ -136,6 +136,10 @@
       <label>GeoIP ASN database
         <input type="text" name="geoip_asn_db" value="{{.Data.Settings.GeoIPASNDB}}" placeholder="/data/GeoLite2-ASN.mmdb">
       </label>
+      <label>IPtoASN database (country + ASN)
+        <input type="text" name="geoip_tsv" value="{{.Data.Settings.GeoIPTSV}}" placeholder="/usr/share/idips/ip2asn-combined.tsv.gz">
+        <span class="hint">TSV or TSV.GZ from iptoasn.com. Empty = auto-detect the bundled database. Used first, with MaxMind as fallback.</span>
+      </label>
       <label>Admin listen
         <input type="text" name="admin_listen" value="{{.Data.Settings.AdminListen}}" placeholder=":8080">
       </label>

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"idips/internal/alloc"
+	"idips/internal/logstream"
 	"idips/internal/model"
 	"idips/internal/store"
 	"idips/internal/upstream"
@@ -34,6 +35,7 @@ type Config struct {
 	DNSHandler http.Handler
 	MasterKey  []byte
 	Log        *slog.Logger
+	Logs       *logstream.Hub
 	Version    string
 }
 
@@ -46,6 +48,7 @@ type Server struct {
 	dnsHandler http.Handler
 	masterKey  []byte
 	log        *slog.Logger
+	logs       *logstream.Hub
 	version    string
 
 	mux  *http.ServeMux
@@ -62,6 +65,7 @@ func New(cfg Config) *Server {
 		dnsHandler: cfg.DNSHandler,
 		masterKey:  cfg.MasterKey,
 		log:        cfg.Log,
+		logs:       cfg.Logs,
 		version:    cfg.Version,
 		mux:        http.NewServeMux(),
 	}
@@ -110,6 +114,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /audit", s.requireAuth(s.auditList))
 	s.mux.HandleFunc("GET /account", s.requireAuth(s.accountGet))
 	s.mux.HandleFunc("POST /account", s.requireAuth(s.accountSave))
+	s.mux.HandleFunc("GET /logs/stream", s.requireAuth(s.logStream))
 
 	if s.dnsHandler != nil {
 		s.mux.Handle("GET /dns-query", s.dnsHandler)

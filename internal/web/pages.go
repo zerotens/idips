@@ -384,6 +384,7 @@ func (s *Server) settingsSave(w http.ResponseWriter, r *http.Request) {
 		HealthTarget:        strings.TrimSpace(r.FormValue("health_target")),
 		GeoIPCityDB:         strings.TrimSpace(r.FormValue("geoip_city_db")),
 		GeoIPASNDB:          strings.TrimSpace(r.FormValue("geoip_asn_db")),
+		GeoIPTSV:            strings.TrimSpace(r.FormValue("geoip_tsv")),
 		APIToken:            strings.TrimSpace(r.FormValue("api_token")),
 		LogLevel:            strings.TrimSpace(r.FormValue("log_level")),
 	}

@@ -99,6 +99,7 @@ func settingsToMap(s model.Settings) map[string]string {
 		"health_target":            s.HealthTarget,
 		"geoip_city_db":            s.GeoIPCityDB,
 		"geoip_asn_db":             s.GeoIPASNDB,
+		"geoip_tsv":                s.GeoIPTSV,
 		"api_token":                s.APIToken,
 		"log_level":                s.LogLevel,
 	}
@@ -188,6 +189,7 @@ func (s *Store) GetSettings() (model.Settings, error) {
 	setStr("health_target", &out.HealthTarget)
 	setStr("geoip_city_db", &out.GeoIPCityDB)
 	setStr("geoip_asn_db", &out.GeoIPASNDB)
+	setStr("geoip_tsv", &out.GeoIPTSV)
 	setStr("api_token", &out.APIToken)
 	setStr("log_level", &out.LogLevel)
 	return out, nil

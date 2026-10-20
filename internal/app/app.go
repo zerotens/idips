@@ -19,6 +19,7 @@ import (
 
 	"idips/internal/alloc"
 	"idips/internal/dnsserver"
+	"idips/internal/logstream"
 	"idips/internal/model"
 	"idips/internal/proxy"
 	"idips/internal/resolver"
@@ -29,7 +30,7 @@ import (
 	"idips/internal/web"
 )
 
-var Version = "0.1.1"
+var Version = "0.2.0"
 
 type App struct {
 	DataDir string
@@ -57,7 +58,7 @@ type App struct {
 	wg     sync.WaitGroup
 }
 
-func New(ctx context.Context, dataDir string, log *slog.Logger, level *slog.LevelVar) (*App, error) {
+func New(ctx context.Context, dataDir string, log *slog.Logger, level *slog.LevelVar, logs *logstream.Hub) (*App, error) {
 	if dataDir == "" {
 		dataDir = "data"
 	}
@@ -104,7 +105,7 @@ func New(ctx context.Context, dataDir string, log *slog.Logger, level *slog.Leve
 		return nil, err
 	}
 	a.engine = routing.New(st, log)
-	if err := a.engine.ReloadGeo(settings.GeoIPCityDB, settings.GeoIPASNDB); err != nil {
+	if err := a.engine.ReloadGeo(settings.GeoIPCityDB, settings.GeoIPASNDB, resolveIPtoASN(settings.GeoIPTSV, abs)); err != nil {
 		log.Warn("GeoIP databases not loaded", "error", err)
 	}
 	a.manager = upstream.New(st, a.Settings, abs, log)
@@ -117,10 +118,33 @@ func New(ctx context.Context, dataDir string, log *slog.Logger, level *slog.Leve
 	a.web = web.New(web.Config{
 		Store: st, Settings: a.Settings, Reload: a.Reload,
 		Manager: a.manager, Alloc: a.alloc, DNSHandler: a.dnsHandler,
-		MasterKey: key, Log: log, Version: Version,
+		MasterKey: key, Log: log, Logs: logs, Version: Version,
 	})
 	_ = ctx
 	return a, nil
+}
+
+func resolveIPtoASN(explicit, dataDir string) string {
+	if explicit != "" {
+		return explicit
+	}
+	if p := strings.TrimSpace(os.Getenv("IDIPS_IPTOASN_DB")); p != "" {
+		return p
+	}
+	candidates := []string{
+		filepath.Join(dataDir, "ip2asn-combined.tsv.gz"),
+		"/usr/share/idips/ip2asn-combined.tsv.gz",
+	}
+	if exe, err := os.Executable(); err == nil {
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "ip2asn-combined.tsv.gz"))
+	}
+	candidates = append(candidates, "ip2asn-combined.tsv.gz")
+	for _, path := range candidates {
+		if st, err := os.Stat(path); err == nil && !st.IsDir() {
+			return path
+		}
+	}
+	return ""
 }
 
 func parseLevel(raw string) slog.Level {
@@ -190,8 +214,8 @@ func (a *App) Reload() {
 			a.Log.Error("reconfigure fake-IP pool failed", "error", err)
 		}
 	}
-	if old.GeoIPCityDB != cfg.GeoIPCityDB || old.GeoIPASNDB != cfg.GeoIPASNDB {
-		if err := a.engine.ReloadGeo(cfg.GeoIPCityDB, cfg.GeoIPASNDB); err != nil {
+	if old.GeoIPCityDB != cfg.GeoIPCityDB || old.GeoIPASNDB != cfg.GeoIPASNDB || old.GeoIPTSV != cfg.GeoIPTSV {
+		if err := a.engine.ReloadGeo(cfg.GeoIPCityDB, cfg.GeoIPASNDB, resolveIPtoASN(cfg.GeoIPTSV, a.DataDir)); err != nil {
 			a.Log.Warn("reload GeoIP failed", "error", err)
 		}
 	}

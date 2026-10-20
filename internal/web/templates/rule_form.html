@@ -35,12 +35,12 @@
 
     <label>GeoIP country codes
       <input type="text" name="match_geoip" value="{{.Data.Rule.MatchGeoIP}}" placeholder="DE, AT, CH">
-      <span class="hint">Requires a MaxMind GeoLite2/GeoIP2 City database in Settings.</span>
+      <span class="hint">Requires an IPtoASN or MaxMind country database in Settings.</span>
     </label>
 
     <label>ASN
       <input type="text" name="match_asn" value="{{.Data.Rule.MatchASN}}" placeholder="AS3320, AS15169">
-      <span class="hint">Requires a MaxMind ASN database in Settings.</span>
+      <span class="hint">Requires an IPtoASN or MaxMind ASN database in Settings.</span>
     </label>
 
     <label>Client IP / CIDR

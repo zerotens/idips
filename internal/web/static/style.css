@@ -113,6 +113,14 @@ h2 { font-size: 1rem; }
 .badge.ok { color: #9ff0a8; border-color: rgba(126, 231, 135, 0.35); background: rgba(126, 231, 135, 0.08); }
 .badge.bad { color: #ffb1b1; border-color: rgba(255, 107, 107, 0.35); background: rgba(255, 107, 107, 0.08); }
 
+.log-stream {
+  margin: 0; padding: 14px 16px; min-height: 140px; max-height: 380px; overflow: auto;
+  background: #05080c; color: #cfe3ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.log-stream:empty::before { content: "Waiting for log events..."; color: var(--muted); }
+
 .kv { display: grid; grid-template-columns: 150px 1fr; gap: 8px 12px; padding: 14px 16px; margin: 0; font-size: 0.88rem; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; }

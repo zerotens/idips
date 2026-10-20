@@ -96,6 +96,23 @@ func (r *Router) Route(ctx context.Context, host string, port int, clientIP net.
 	if decision.UpstreamID != 0 {
 		fields = append(fields, "upstream", decision.UpstreamName)
 	}
+	if len(ips) > 0 {
+		info, ok := r.engine.LookupIP(ips[0])
+		if info.IP != "" {
+			fields = append(fields, "target_ip", info.IP)
+		}
+		if ok {
+			if info.ASN != 0 {
+				fields = append(fields, "asn", fmt.Sprintf("AS%d", info.ASN))
+			}
+			if info.Country != "" {
+				fields = append(fields, "country", info.Country)
+			}
+			if info.Org != "" {
+				fields = append(fields, "asn_org", info.Org)
+			}
+		}
+	}
 
 	var conn net.Conn
 	switch decision.Action {

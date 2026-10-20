@@ -5,3 +5,5 @@ idips
 *.db-wal
 *.db-shm
 master.key
+
+ip2asn-combined.tsv.gz
