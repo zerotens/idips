@@ -97,7 +97,7 @@ jobs:
           if [[ "$GOOS" == "windows" ]]; then
             (cd dist && zip -qr "${package}.zip" "${package}")
           else
-            tar -C dist -czf "${package}.tar.gz" "${package}"
+            tar -C dist -czf "dist/${package}.tar.gz" "${package}"
           fi
           rm -rf "$stage"
 
