@@ -10,7 +10,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X idips/internal/app.Versi
 FROM golang:1.22-alpine AS wireproxy
 RUN GOBIN=/out go install github.com/pufferffish/wireproxy/cmd/wireproxy@v1.0.10
 
-FROM alpine:3.20
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates tzdata \
     && mkdir -p /data
 COPY --from=build /out/idips /usr/local/bin/idips
