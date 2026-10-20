@@ -58,6 +58,19 @@ docker compose up -d --build
 
 The Compose file maps admin (`8080`), SOCKS5 (`1080`), HTTP (`8081`), and DNS (`5353` on host to container port `53`). For TPROXY, see below; it requires `network_mode: host` and `NET_ADMIN`.
 
+### Kubernetes (Helm)
+
+The Helm chart is published as an OCI artifact in the GitHub Container Registry:
+
+```bash
+helm install idips oci://ghcr.io/zerotens/idips/charts/idips \
+  --version 0.1.0 \
+  --namespace idips --create-namespace \
+  --set auth.adminPassword='change-me'
+```
+
+See `deploy/helm/idips/values.yaml` for all available values. The chart uses the released container image from GHCR by default.
+
 ## Configuration
 
 The most important options are managed in the admin UI under **Settings**:

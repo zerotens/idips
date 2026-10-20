@@ -7,7 +7,8 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/zerotens/idips
-  tag: latest
+  # Empty means the chart's appVersion, which corresponds to the released image.
+  tag: ""
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
