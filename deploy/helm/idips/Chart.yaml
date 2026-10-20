@@ -2,6 +2,6 @@ apiVersion: v2
 name: idips
 description: Intelligent DNS & proxy service with fake-IP allocation and admin UI
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.1
+appVersion: "0.1.1"
 kubeVersion: ">=1.24.0-0"

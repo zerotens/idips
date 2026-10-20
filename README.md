@@ -64,7 +64,7 @@ The Helm chart is published as an OCI artifact in the GitHub Container Registry:
 
 ```bash
 helm install idips oci://ghcr.io/zerotens/idips/charts/idips \
-  --version 0.1.0 \
+  --version 0.1.1 \
   --namespace idips --create-namespace \
   --set auth.adminPassword='change-me'
 ```

@@ -29,7 +29,7 @@ import (
 	"idips/internal/web"
 )
 
-var Version = "0.1.0"
+var Version = "0.1.1"
 
 type App struct {
 	DataDir string
