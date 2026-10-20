@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS rules (
     enabled            INTEGER NOT NULL DEFAULT 1,
     match_domain       TEXT NOT NULL DEFAULT '',
     domain_mode        TEXT NOT NULL DEFAULT 'suffix',
+    match_logic        TEXT NOT NULL DEFAULT 'and',
     match_cidr         TEXT NOT NULL DEFAULT '',
     match_geoip        TEXT NOT NULL DEFAULT '',
     match_asn          TEXT NOT NULL DEFAULT '',

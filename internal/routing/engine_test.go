@@ -79,3 +79,40 @@ func mustRule(t *testing.T, st *store.Store, r model.Rule) {
 		t.Fatal(err)
 	}
 }
+
+func TestDecideRuleLogicAndOr(t *testing.T) {
+	st := testStore(t)
+	mustRule(t, st, model.Rule{
+		Name: "and rule", Priority: 10, Enabled: true,
+		MatchDomain: "and.example", DomainMode: "suffix", MatchPort: "443",
+		MatchLogic: model.LogicAnd, Action: model.ActionBlock,
+	})
+	mustRule(t, st, model.Rule{
+		Name: "or rule", Priority: 20, Enabled: true,
+		MatchDomain: "or.example", DomainMode: "suffix", MatchPort: "8443",
+		MatchLogic: model.LogicOr, Action: model.ActionBlock,
+	})
+
+	e := New(st, testLogger())
+	defer e.Close()
+
+	check := func(host string, port int, action string) {
+		t.Helper()
+		d, err := e.Decide(host, nil, net.ParseIP("10.0.0.1"), port)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d.Action != action {
+			t.Fatalf("%s:%d: got action=%s, want %s (reason %s)", host, port, d.Action, action, d.Reason)
+		}
+	}
+
+	check("and.example", 443, model.ActionBlock)
+	check("and.example", 80, model.ActionDirect)
+	check("and.example", 0, model.ActionBlock)
+	check("or.example", 80, model.ActionBlock)
+	check("or.example", 0, model.ActionBlock)
+	check("other.example", 8443, model.ActionBlock)
+	check("other.example", 80, model.ActionDirect)
+	check("other.example", 0, model.ActionDirect)
+}

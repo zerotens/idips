@@ -11,6 +11,9 @@ const (
 	ActionDirect = "direct"
 	ActionBlock  = "block"
 
+	LogicAnd = "and"
+	LogicOr  = "or"
+
 	HealthUnknown = "unknown"
 	HealthUp      = "up"
 	HealthDown    = "down"
@@ -40,6 +43,7 @@ type Rule struct {
 	Enabled         bool      `json:"enabled"`
 	MatchDomain     string    `json:"match_domain"`
 	DomainMode      string    `json:"domain_mode"`
+	MatchLogic      string    `json:"match_logic"`
 	MatchCIDR       string    `json:"match_cidr"`
 	MatchGeoIP      string    `json:"match_geoip"`
 	MatchASN        string    `json:"match_asn"`

@@ -53,7 +53,47 @@ func (s *Store) migrate() error {
 	if _, err := s.db.Exec(schemaSQL); err != nil {
 		return err
 	}
+	if err := s.ensureRuleLogicColumn(); err != nil {
+		return err
+	}
 	return s.seedSettings()
+}
+
+func (s *Store) ensureRuleLogicColumn() error {
+	rows, err := s.db.Query(`PRAGMA table_info(rules)`)
+	if err != nil {
+		return err
+	}
+	hasColumn := false
+	for rows.Next() {
+		var (
+			cid     int
+			name    string
+			typ     string
+			notNull int
+			dflt    any
+			pk      int
+		)
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		if name == "match_logic" {
+			hasColumn = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if hasColumn {
+		return nil
+	}
+	_, err = s.db.Exec(`ALTER TABLE rules ADD COLUMN match_logic TEXT NOT NULL DEFAULT 'and'`)
+	return err
 }
 
 func (s *Store) seedSettings() error {
@@ -357,7 +397,7 @@ func (s *Store) scanRule(sc interface{ Scan(dest ...any) error }) (model.Rule, e
 	var r model.Rule
 	var enabled int
 	var created, updated int64
-	err := sc.Scan(&r.ID, &r.Name, &r.Priority, &enabled, &r.MatchDomain, &r.DomainMode, &r.MatchCIDR,
+	err := sc.Scan(&r.ID, &r.Name, &r.Priority, &enabled, &r.MatchDomain, &r.DomainMode, &r.MatchLogic, &r.MatchCIDR,
 		&r.MatchGeoIP, &r.MatchASN, &r.MatchClientCIDR, &r.MatchPort, &r.Action, &r.UpstreamID, &created, &updated)
 	if err != nil {
 		return r, err
@@ -368,7 +408,7 @@ func (s *Store) scanRule(sc interface{ Scan(dest ...any) error }) (model.Rule, e
 	return r, nil
 }
 
-const ruleCols = `id, name, priority, enabled, match_domain, domain_mode, match_cidr, match_geoip, match_asn, match_client_cidr, match_port, action, upstream_id, created_at, updated_at`
+const ruleCols = `id, name, priority, enabled, match_domain, domain_mode, match_logic, match_cidr, match_geoip, match_asn, match_client_cidr, match_port, action, upstream_id, created_at, updated_at`
 
 func (s *Store) ListRules() ([]model.Rule, error) {
 	rows, err := s.db.Query(`SELECT ` + ruleCols + ` FROM rules ORDER BY priority, id`)
@@ -396,11 +436,19 @@ func (s *Store) GetRule(id int64) (model.Rule, error) {
 	return r, err
 }
 
+func normalizeRuleLogic(raw string) string {
+	if strings.EqualFold(strings.TrimSpace(raw), model.LogicOr) {
+		return model.LogicOr
+	}
+	return model.LogicAnd
+}
+
 func (s *Store) CreateRule(r model.Rule) (int64, error) {
 	now := time.Now()
-	res, err := s.db.Exec(`INSERT INTO rules(name, priority, enabled, match_domain, domain_mode, match_cidr, match_geoip, match_asn, match_client_cidr, match_port, action, upstream_id, created_at, updated_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		r.Name, r.Priority, boolInt(r.Enabled), r.MatchDomain, r.DomainMode, r.MatchCIDR, r.MatchGeoIP, r.MatchASN,
+	logic := normalizeRuleLogic(r.MatchLogic)
+	res, err := s.db.Exec(`INSERT INTO rules(name, priority, enabled, match_domain, domain_mode, match_logic, match_cidr, match_geoip, match_asn, match_client_cidr, match_port, action, upstream_id, created_at, updated_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.Name, r.Priority, boolInt(r.Enabled), r.MatchDomain, r.DomainMode, logic, r.MatchCIDR, r.MatchGeoIP, r.MatchASN,
 		r.MatchClientCIDR, r.MatchPort, r.Action, r.UpstreamID, now.Unix(), now.Unix())
 	if err != nil {
 		return 0, err
@@ -409,8 +457,9 @@ func (s *Store) CreateRule(r model.Rule) (int64, error) {
 }
 
 func (s *Store) UpdateRule(r model.Rule) error {
-	_, err := s.db.Exec(`UPDATE rules SET name=?, priority=?, enabled=?, match_domain=?, domain_mode=?, match_cidr=?, match_geoip=?, match_asn=?, match_client_cidr=?, match_port=?, action=?, upstream_id=?, updated_at=? WHERE id=?`,
-		r.Name, r.Priority, boolInt(r.Enabled), r.MatchDomain, r.DomainMode, r.MatchCIDR, r.MatchGeoIP, r.MatchASN,
+	logic := normalizeRuleLogic(r.MatchLogic)
+	_, err := s.db.Exec(`UPDATE rules SET name=?, priority=?, enabled=?, match_domain=?, domain_mode=?, match_logic=?, match_cidr=?, match_geoip=?, match_asn=?, match_client_cidr=?, match_port=?, action=?, upstream_id=?, updated_at=? WHERE id=?`,
+		r.Name, r.Priority, boolInt(r.Enabled), r.MatchDomain, r.DomainMode, logic, r.MatchCIDR, r.MatchGeoIP, r.MatchASN,
 		r.MatchClientCIDR, r.MatchPort, r.Action, r.UpstreamID, time.Now().Unix(), r.ID)
 	return err
 }

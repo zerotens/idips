@@ -209,23 +209,70 @@ func (e *Engine) Decide(host string, ips []net.IP, clientIP net.IP, port int) (D
 }
 
 func (e *Engine) matches(r *model.Rule, host string, ips []net.IP, clientIP net.IP, port int) bool {
-	if r.MatchDomain != "" && !matchDomain(r.DomainMode, r.MatchDomain, host) {
-		return false
+	logicOr := strings.EqualFold(strings.TrimSpace(r.MatchLogic), model.LogicOr)
+	active := false
+	matched := false
+
+	if r.MatchDomain != "" {
+		active = true
+		ok := matchDomain(r.DomainMode, r.MatchDomain, host)
+		if logicOr {
+			matched = matched || ok
+		} else if !ok {
+			return false
+		}
 	}
-	if r.MatchCIDR != "" && !matchCIDRList(r.MatchCIDR, ips) {
-		return false
+	if r.MatchCIDR != "" {
+		active = true
+		ok := matchCIDRList(r.MatchCIDR, ips)
+		if logicOr {
+			matched = matched || ok
+		} else if !ok {
+			return false
+		}
 	}
-	if r.MatchClientCIDR != "" && !matchCIDRList(r.MatchClientCIDR, []net.IP{clientIP}) {
-		return false
+	if r.MatchClientCIDR != "" {
+		active = true
+		ok := matchCIDRList(r.MatchClientCIDR, []net.IP{clientIP})
+		if logicOr {
+			matched = matched || ok
+		} else if !ok {
+			return false
+		}
 	}
-	if r.MatchPort != "" && port > 0 && !matchPortList(r.MatchPort, port) {
-		return false
+	if r.MatchPort != "" && port > 0 {
+		active = true
+		ok := matchPortList(r.MatchPort, port)
+		if logicOr {
+			matched = matched || ok
+		} else if !ok {
+			return false
+		}
 	}
-	if r.MatchGeoIP != "" && !e.matchGeo(r.MatchGeoIP, ips) {
-		return false
+	if r.MatchGeoIP != "" {
+		active = true
+		ok := e.matchGeo(r.MatchGeoIP, ips)
+		if logicOr {
+			matched = matched || ok
+		} else if !ok {
+			return false
+		}
 	}
-	if r.MatchASN != "" && !e.matchASN(r.MatchASN, ips) {
-		return false
+	if r.MatchASN != "" {
+		active = true
+		ok := e.matchASN(r.MatchASN, ips)
+		if logicOr {
+			matched = matched || ok
+		} else if !ok {
+			return false
+		}
+	}
+
+	if !active {
+		return true
+	}
+	if logicOr {
+		return matched
 	}
 	return true
 }

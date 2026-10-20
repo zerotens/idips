@@ -16,6 +16,14 @@
       <span class="hint">Lower numbers are evaluated first.</span>
     </label>
 
+    <label>Condition logic
+      <select name="match_logic">
+        <option value="and" {{if ne .Data.Rule.MatchLogic "or"}}selected{{end}}>AND — all conditions must match</option>
+        <option value="or" {{if eq .Data.Rule.MatchLogic "or"}}selected{{end}}>OR — any condition may match</option>
+      </select>
+      <span class="hint">Applies to all non-empty conditions in this rule. A rule without conditions matches everything.</span>
+    </label>
+
     <label>Domain pattern
       <input type="text" name="match_domain" value="{{.Data.Rule.MatchDomain}}" placeholder="netflix.com, example.org">
       <span class="hint">Comma-separated for exact/suffix. Regex uses Go RE2 syntax.</span>

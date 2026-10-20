@@ -4,7 +4,7 @@
     <h2>Routing rules</h2>
     <a class="button" href="/rules/new">New rule</a>
   </div>
-  <p class="muted small">Rules are evaluated by ascending priority. All configured match fields must match (AND). If a proxy upstream is down, evaluation continues with the next matching rule.</p>
+  <p class="muted small">Rules are evaluated by ascending priority. Each rule combines its configured conditions with AND (all) or OR (any). If a proxy upstream is down, evaluation continues with the next matching rule.</p>
   {{if .Data.Rules}}
   <table class="table">
     <thead>
@@ -16,6 +16,7 @@
         <td class="mono">{{.Rule.Priority}}</td>
         <td><a href="/rules/{{.Rule.ID}}/edit">{{.Rule.Name}}</a></td>
         <td class="match-cell">
+          {{if or .Rule.MatchDomain .Rule.MatchCIDR .Rule.MatchGeoIP .Rule.MatchASN .Rule.MatchClientCIDR .Rule.MatchPort}}<div><span class="badge">{{if eq .Rule.MatchLogic "or"}}OR{{else}}AND{{end}}</span></div>{{end}}
           {{if .Rule.MatchDomain}}<div><span class="muted">domain {{.Rule.DomainMode}}:</span> {{.Rule.MatchDomain}}</div>{{end}}
           {{if .Rule.MatchCIDR}}<div><span class="muted">ip:</span> {{.Rule.MatchCIDR}}</div>{{end}}
           {{if .Rule.MatchGeoIP}}<div><span class="muted">geo:</span> {{.Rule.MatchGeoIP}}</div>{{end}}

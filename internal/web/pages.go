@@ -224,7 +224,7 @@ type ruleFormData struct {
 func (s *Server) ruleNew(w http.ResponseWriter, r *http.Request) {
 	upstreams, _ := s.store.ListUpstreams()
 	s.render(w, r, "rule_form.html", "New rule", "rules", ruleFormData{
-		Rule:      model.Rule{Enabled: true, Priority: 100, DomainMode: "suffix", Action: model.ActionProxy},
+		Rule:      model.Rule{Enabled: true, Priority: 100, DomainMode: "suffix", MatchLogic: model.LogicAnd, Action: model.ActionProxy},
 		IsNew:     true,
 		Upstreams: upstreams,
 	})
@@ -256,12 +256,16 @@ func (s *Server) ruleSave(w http.ResponseWriter, r *http.Request) {
 		Enabled:         formBool(r, "enabled"),
 		MatchDomain:     strings.TrimSpace(r.FormValue("match_domain")),
 		DomainMode:      strings.TrimSpace(r.FormValue("domain_mode")),
+		MatchLogic:      strings.ToLower(strings.TrimSpace(r.FormValue("match_logic"))),
 		MatchCIDR:       strings.TrimSpace(r.FormValue("match_cidr")),
 		MatchGeoIP:      strings.TrimSpace(r.FormValue("match_geoip")),
 		MatchASN:        strings.TrimSpace(r.FormValue("match_asn")),
 		MatchClientCIDR: strings.TrimSpace(r.FormValue("match_client_cidr")),
 		MatchPort:       strings.TrimSpace(r.FormValue("match_port")),
 		Action:          strings.TrimSpace(r.FormValue("action")),
+	}
+	if rule.MatchLogic == "" {
+		rule.MatchLogic = model.LogicAnd
 	}
 	if raw := r.FormValue("upstream_id"); raw != "" {
 		rule.UpstreamID, _ = strconv.ParseInt(raw, 10, 64)
@@ -515,6 +519,11 @@ func validateRule(st *store.Store, rule model.Rule) error {
 	case "exact", "suffix", "regex":
 	default:
 		return fmt.Errorf("invalid domain mode %q", rule.DomainMode)
+	}
+	switch strings.ToLower(strings.TrimSpace(rule.MatchLogic)) {
+	case "", model.LogicAnd, model.LogicOr:
+	default:
+		return fmt.Errorf("invalid match logic %q (use \"and\" or \"or\")", rule.MatchLogic)
 	}
 	if rule.DomainMode == "regex" && rule.MatchDomain != "" {
 		if _, err := regexp.Compile("(?i)" + rule.MatchDomain); err != nil {

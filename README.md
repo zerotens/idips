@@ -13,7 +13,7 @@ The typical goal: reach Netflix, streaming services, or geo-restricted offerings
 - **DNS server** UDP/TCP, optional DoH (`/dns-query`) and DoT
 - **DNS forwarding** with an optional upstream through a SOCKS5/HTTP/WireGuard proxy
 - **AAAA blocking** (enabled by default) to prevent IPv6 bypass
-- **Routing engine**: domain (exact/suffix/regex), destination IP/CIDR, GeoIP, ASN, client CIDR, port
+- **Routing engine**: domain (exact/suffix/regex), destination IP/CIDR, GeoIP, ASN, client CIDR, port, combined per rule with AND or OR
 - **Upstream types**: SOCKS5, HTTP CONNECT, WireGuard via a `wireproxy` subprocess
 - **Inbound**: SOCKS5, HTTP CONNECT, TPROXY (Linux)
 - **Healthchecks**, failover via rule priority, test button in the UI
@@ -68,7 +68,7 @@ The Helm chart is published as an OCI artifact in the GitHub Container Registry:
 
 ```bash
 helm install idips oci://ghcr.io/zerotens/idips/charts/idips \
-  --version 0.2.0 \
+  --version 0.3.0 \
   --namespace idips --create-namespace \
   --set auth.adminPassword='change-me'
 ```
@@ -161,7 +161,12 @@ For `direct` rules, the real DNS answer is returned unless `fake_all` is enabled
 
 ## Routing rules
 
-Rules are evaluated in ascending `priority` order. All configured criteria must match (AND). An empty criteria set is a catch-all rule.
+Rules are evaluated in ascending `priority` order. Each rule combines its non-empty criteria using its condition logic:
+
+- **AND** (default): every configured criterion must match.
+- **OR**: at least one configured criterion must match.
+
+A rule with no criteria is a catch-all and matches everything. The port criterion is ignored during DNS/fake-IP decisions and enforced when a connection is established.
 
 | Criterion | Example |
 |---|---|
@@ -199,7 +204,7 @@ The router must reach both DNS (UDP/TCP 53) and SOCKS5 (TCP 1080) on a stable IP
 
 ```bash
 helm upgrade --install idips oci://ghcr.io/zerotens/idips/charts/idips \
-  --version 0.2.0 \
+  --version 0.3.0 \
   --namespace idips --create-namespace \
   --set service.type=LoadBalancer \
   --set auth.adminPassword='change-me'
@@ -365,7 +370,7 @@ curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/leases?q=netfli
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/health
 ```
 
-Other endpoints: `POST/PUT/DELETE /api/upstreams`, `POST/DELETE /api/rules`, `DELETE /api/leases/{id}`, `GET/PUT /api/settings`, `POST /api/upstreams/{id}/test`.
+Other endpoints: `POST/PUT/DELETE /api/upstreams`, `POST/DELETE /api/rules`, `DELETE /api/leases/{id}`, `GET/PUT /api/settings`, `POST /api/upstreams/{id}/test`. Rule objects accept `match_logic` with `and` (default) or `or`.
 
 ## Data and secrets
 
