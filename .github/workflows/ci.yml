@@ -52,3 +52,25 @@ jobs:
 
       - name: Render
         run: helm template idips deploy/helm/idips > /dev/null
+
+  docker:
+    name: Build container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          platforms: linux/amd64
+          build-args: |
+            VERSION=ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
