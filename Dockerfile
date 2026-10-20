@@ -1,10 +1,11 @@
 FROM golang:1.22-alpine AS build
+ARG VERSION=dev
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/idips ./cmd/idips
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X idips/internal/app.Version=${VERSION}" -o /out/idips ./cmd/idips
 
 FROM golang:1.22-alpine AS wireproxy
 RUN GOBIN=/out go install github.com/pufferffish/wireproxy/cmd/wireproxy@v1.0.10

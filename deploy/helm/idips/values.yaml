@@ -6,7 +6,7 @@
 replicaCount: 1
 
 image:
-  repository: idips
+  repository: ghcr.io/zerotens/idips
   tag: latest
   pullPolicy: IfNotPresent
 
