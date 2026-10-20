@@ -1,0 +1,84 @@
+{{define "content"}}
+<section class="cards">
+  <div class="card">
+    <div class="card-label">Active fake-IP leases</div>
+    <div class="card-value">{{.Data.LeaseCount}}</div>
+    <div class="muted small">{{.Data.Stats.CIDR}} · {{.Data.Stats.Used}} / {{.Data.Stats.Size}} used</div>
+    <div class="meter"><span style="width: {{printf "%.1f" .Data.UsagePercent}}%"></span></div>
+  </div>
+  <div class="card">
+    <div class="card-label">Routing rules</div>
+    <div class="card-value">{{.Data.RuleCount}}</div>
+    <div class="muted small">First match wins by priority</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Upstreams</div>
+    <div class="card-value">{{.Data.UpCount}} <span class="muted">up</span> / {{.Data.DownCount}} <span class="muted">down</span></div>
+    <div class="muted small">{{len .Data.Upstreams}} configured</div>
+  </div>
+  <div class="card">
+    <div class="card-label">DNS</div>
+    <div class="card-value mono">{{.Data.Settings.DNSListen}}</div>
+    <div class="muted small">upstream {{.Data.Settings.DNSUpstream}} ({{.Data.Settings.DNSUpstreamProtocol}})</div>
+  </div>
+</section>
+
+<section class="grid two">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Upstream health</h2>
+      <a class="button secondary small" href="/upstreams">Manage</a>
+    </div>
+    {{if .Data.Upstreams}}
+    <table class="table">
+      <thead><tr><th>Name</th><th>Type</th><th>Health</th><th>Last check</th></tr></thead>
+      <tbody>
+      {{range .Data.Upstreams}}
+        <tr>
+          <td><a href="/upstreams/{{.ID}}/edit">{{.Name}}</a></td>
+          <td>{{typeLabel .Type}}</td>
+          <td><span class="{{statusClass .Health}}">{{.Health}}</span></td>
+          <td class="muted">{{fmtTime .LastCheck}}</td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+    {{else}}
+      <p class="empty">No upstreams yet. <a href="/upstreams/new">Add the first one</a>.</p>
+    {{end}}
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Service endpoints</h2>
+      <a class="button secondary small" href="/settings">Settings</a>
+    </div>
+    <dl class="kv">
+      <dt>SOCKS5</dt><dd class="mono">{{if .Data.Settings.SOCKS5Listen}}{{.Data.Settings.SOCKS5Listen}}{{else}}disabled{{end}}</dd>
+      <dt>HTTP CONNECT</dt><dd class="mono">{{if .Data.Settings.HTTPListen}}{{.Data.Settings.HTTPListen}}{{else}}disabled{{end}}</dd>
+      <dt>TPROXY</dt><dd class="mono">{{if .Data.Settings.TProxyEnabled}}{{.Data.Settings.TProxyListen}}{{else}}disabled{{end}}</dd>
+      <dt>DoH</dt><dd class="mono">{{if .Data.Settings.DoHListen}}{{.Data.Settings.DoHListen}}{{else}}/dns-query on admin listener{{end}}</dd>
+      <dt>DoT</dt><dd class="mono">{{if .Data.Settings.DoTListen}}{{.Data.Settings.DoTListen}}{{else}}disabled{{end}}</dd>
+      <dt>Pool</dt><dd class="mono">{{.Data.Stats.CIDR}}</dd>
+      <dt>Lease TTL</dt><dd>{{.Data.Settings.LeaseTTLSeconds}}s</dd>
+    </dl>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Recent activity</h2>
+    <a class="button secondary small" href="/audit">Full audit log</a>
+  </div>
+  {{if .Data.Audit}}
+  <table class="table">
+    <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead>
+    <tbody>
+    {{range .Data.Audit}}
+      <tr><td class="muted">{{fmtTime .Time}}</td><td>{{.Actor}}</td><td>{{.Action}}</td><td class="muted">{{.Detail}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">No activity yet.</p>{{end}}
+</section>
+{{end}}

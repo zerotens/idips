@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="panel">
+  <div class="panel-head">
+    <h2>Configured upstreams</h2>
+    <a class="button" href="/upstreams/new">New upstream</a>
+  </div>
+  {{if .Data.Upstreams}}
+  <table class="table">
+    <thead>
+      <tr><th>Name</th><th>Type</th><th>Address</th><th>Priority</th><th>Health</th><th>Last check</th><th></th></tr>
+    </thead>
+    <tbody>
+    {{range .Data.Upstreams}}
+      <tr>
+        <td>
+          <a href="/upstreams/{{.ID}}/edit">{{.Name}}</a>
+          {{if not .Enabled}}<span class="badge">disabled</span>{{end}}
+        </td>
+        <td>{{typeLabel .Type}}</td>
+        <td class="mono">{{if .Address}}{{.Address}}{{else}}managed wireproxy{{end}}</td>
+        <td>{{.Priority}}</td>
+        <td><span class="{{statusClass .Health}}">{{.Health}}</span></td>
+        <td class="muted">{{fmtTime .LastCheck}}</td>
+        <td class="actions">
+          <form method="post" action="/upstreams/{{.ID}}/test" hx-post="/upstreams/{{.ID}}/test" hx-target="#test-{{.ID}}" hx-swap="innerHTML">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <button class="button secondary small" type="submit">Test</button>
+          </form>
+          <a class="button secondary small" href="/upstreams/{{.ID}}/edit">Edit</a>
+          <form method="post" action="/upstreams/{{.ID}}/delete" onsubmit="return confirm('Delete this upstream?')">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <button class="button danger small" type="submit">Delete</button>
+          </form>
+          <span id="test-{{.ID}}" class="test-result"></span>
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty">No upstreams configured. Add a SOCKS5, HTTP CONNECT or WireGuard upstream.</p>
+  {{end}}
+</div>
+{{end}}

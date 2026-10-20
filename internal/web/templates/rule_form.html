@@ -1,0 +1,82 @@
+{{define "content"}}
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{if .Data.IsNew}}New rule{{else}}Edit rule{{end}}</h2>
+    <a class="button secondary" href="/rules">Back</a>
+  </div>
+  <form method="post" action="{{if .Data.IsNew}}/rules{{else}}/rules/{{.Data.Rule.ID}}{{end}}" class="form-grid">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+
+    <label>Name
+      <input type="text" name="name" value="{{.Data.Rule.Name}}" required placeholder="e.g. Netflix via DE">
+    </label>
+
+    <label>Priority
+      <input type="number" name="priority" value="{{.Data.Rule.Priority}}">
+      <span class="hint">Lower numbers are evaluated first.</span>
+    </label>
+
+    <label>Domain pattern
+      <input type="text" name="match_domain" value="{{.Data.Rule.MatchDomain}}" placeholder="netflix.com, example.org">
+      <span class="hint">Comma-separated for exact/suffix. Regex uses Go RE2 syntax.</span>
+    </label>
+
+    <label>Domain mode
+      <select name="domain_mode">
+        <option value="suffix" {{if eq .Data.Rule.DomainMode "suffix"}}selected{{end}}>suffix</option>
+        <option value="exact" {{if eq .Data.Rule.DomainMode "exact"}}selected{{end}}>exact</option>
+        <option value="regex" {{if eq .Data.Rule.DomainMode "regex"}}selected{{end}}>regex</option>
+      </select>
+    </label>
+
+    <label>Target IP / CIDR
+      <input type="text" name="match_cidr" value="{{.Data.Rule.MatchCIDR}}" placeholder="203.0.113.0/24, 2001:db8::/32">
+    </label>
+
+    <label>GeoIP country codes
+      <input type="text" name="match_geoip" value="{{.Data.Rule.MatchGeoIP}}" placeholder="DE, AT, CH">
+      <span class="hint">Requires a MaxMind GeoLite2/GeoIP2 City database in Settings.</span>
+    </label>
+
+    <label>ASN
+      <input type="text" name="match_asn" value="{{.Data.Rule.MatchASN}}" placeholder="AS3320, AS15169">
+      <span class="hint">Requires a MaxMind ASN database in Settings.</span>
+    </label>
+
+    <label>Client IP / CIDR
+      <input type="text" name="match_client_cidr" value="{{.Data.Rule.MatchClientCIDR}}" placeholder="192.168.1.0/24">
+    </label>
+
+    <label>Target port
+      <input type="text" name="match_port" value="{{.Data.Rule.MatchPort}}" placeholder="443, 80, 8000-8100">
+      <span class="hint">Ignored during DNS fake-IP decisions, enforced when connecting.</span>
+    </label>
+
+    <label>Action
+      <select name="action">
+        <option value="proxy" {{if eq .Data.Rule.Action "proxy"}}selected{{end}}>proxy</option>
+        <option value="direct" {{if eq .Data.Rule.Action "direct"}}selected{{end}}>direct</option>
+        <option value="block" {{if eq .Data.Rule.Action "block"}}selected{{end}}>block</option>
+      </select>
+    </label>
+
+    <label>Upstream
+      <select name="upstream_id">
+        <option value="0" {{if eq .Data.Rule.UpstreamID 0}}selected{{end}}>— none —</option>
+        {{range .Data.Upstreams}}
+        <option value="{{.ID}}" {{if eq .ID $.Data.Rule.UpstreamID}}selected{{end}}>{{.Name}} ({{typeLabel .Type}})</option>
+        {{end}}
+      </select>
+    </label>
+
+    <label class="inline full">
+      <input type="checkbox" name="enabled" value="1" {{if .Data.Rule.Enabled}}checked{{end}}> enabled
+    </label>
+
+    <div class="form-actions full">
+      <button class="button" type="submit">Save rule</button>
+      <a class="button secondary" href="/rules">Cancel</a>
+    </div>
+  </form>
+</div>
+{{end}}

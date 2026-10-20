@@ -1,0 +1,34 @@
+# Runtime data and secrets
+/data/
+*.db
+*.db-wal
+*.db-shm
+master.key
+*.key
+*.pem
+.env
+.env.*
+
+# Built binaries
+/idips
+/wireproxy
+/bin/
+/dist/
+*.exe
+
+# Helm
+*.tgz
+deploy/helm/*/charts/
+
+# Test and coverage output
+*.test
+*.out
+coverage.*
+
+# Editors and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

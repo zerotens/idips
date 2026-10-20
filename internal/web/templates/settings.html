@@ -1,0 +1,167 @@
+{{define "content"}}
+<form method="post" action="/settings">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+
+  <section class="panel">
+    <div class="panel-head"><h2>Fake-IP pool &amp; DNS</h2></div>
+    <div class="form-grid">
+      <label>Pool CIDR
+        <input type="text" name="pool_cidr" value="{{.Data.Settings.PoolCIDR}}" required>
+        <span class="hint">IPv4, /8 to /30. Changing the pool reconfigures the allocator immediately.</span>
+      </label>
+      <label>Lease TTL (seconds)
+        <input type="number" name="lease_ttl_seconds" value="{{.Data.Settings.LeaseTTLSeconds}}" min="60">
+      </label>
+      <label>DNS response TTL (seconds)
+        <input type="number" name="dns_ttl" value="{{.Data.Settings.DNSTTL}}" min="1">
+      </label>
+      <label class="inline"><input type="checkbox" name="block_aaaa" value="1" {{if .Data.Settings.BlockAAAA}}checked{{end}}> block AAAA (force IPv4)</label>
+      <label class="inline"><input type="checkbox" name="fake_all" value="1" {{if .Data.Settings.FakeAll}}checked{{end}}> fake-IP for every A query</label>
+
+      <label>DNS listen address
+        <input type="text" name="dns_listen" value="{{.Data.Settings.DNSListen}}" placeholder=":53">
+      </label>
+      <label>DNS upstream
+        <input type="text" name="dns_upstream" value="{{.Data.Settings.DNSUpstream}}" placeholder="1.1.1.1:53">
+      </label>
+      <label>DNS upstream protocol
+        <select name="dns_upstream_protocol">
+          <option value="udp" {{if eq .Data.Settings.DNSUpstreamProtocol "udp"}}selected{{end}}>UDP (+TCP fallback)</option>
+          <option value="tcp" {{if eq .Data.Settings.DNSUpstreamProtocol "tcp"}}selected{{end}}>TCP</option>
+        </select>
+      </label>
+      <label>DNS upstream via proxy
+        <select name="dns_upstream_upstream_id">
+          <option value="0" {{if eq .Data.Settings.DNSUpstreamUpstreamID 0}}selected{{end}}>direct</option>
+          {{range .Data.Upstreams}}
+          <option value="{{.ID}}" {{if eq .ID $.Data.Settings.DNSUpstreamUpstreamID}}selected{{end}}>{{.Name}} ({{typeLabel .Type}})</option>
+          {{end}}
+        </select>
+        <span class="hint">When set, DNS queries are sent over TCP through this upstream.</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>DNS server endpoints</h2></div>
+    <div class="form-grid">
+      <label>DoH listen (optional)
+        <input type="text" name="doh_listen" value="{{.Data.Settings.DoHListen}}" placeholder=":8053">
+        <span class="hint">DoH is always available at /dns-query on the admin listener. A separate listener is optional.</span>
+      </label>
+      <label>DoT listen (optional)
+        <input type="text" name="dot_listen" value="{{.Data.Settings.DoTListen}}" placeholder=":853">
+      </label>
+      <label>DNS TLS certificate
+        <input type="text" name="dns_cert" value="{{.Data.Settings.DNSCert}}" placeholder="/data/tls/dns.crt">
+      </label>
+      <label>DNS TLS key
+        <input type="text" name="dns_key" value="{{.Data.Settings.DNSKey}}" placeholder="/data/tls/dns.key">
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Inbound proxies</h2></div>
+    <div class="form-grid">
+      <label>SOCKS5 listen
+        <input type="text" name="socks5_listen" value="{{.Data.Settings.SOCKS5Listen}}" placeholder=":1080">
+      </label>
+      <label>SOCKS5 username
+        <input type="text" name="socks5_username" value="{{.Data.Settings.SOCKS5Username}}" autocomplete="off">
+      </label>
+      <label>SOCKS5 password
+        <input type="password" name="socks5_password" value="{{.Data.Settings.SOCKS5Password}}" autocomplete="new-password">
+      </label>
+      <label>HTTP CONNECT listen
+        <input type="text" name="http_listen" value="{{.Data.Settings.HTTPListen}}" placeholder=":8081">
+      </label>
+      <label>HTTP proxy username
+        <input type="text" name="http_username" value="{{.Data.Settings.HTTPUsername}}" autocomplete="off">
+      </label>
+      <label>HTTP proxy password
+        <input type="password" name="http_password" value="{{.Data.Settings.HTTPPassword}}" autocomplete="new-password">
+      </label>
+      <label class="inline"><input type="checkbox" name="tproxy_enabled" value="1" {{if .Data.Settings.TProxyEnabled}}checked{{end}}> enable TPROXY listener</label>
+      <label>TPROXY listen
+        <input type="text" name="tproxy_listen" value="{{.Data.Settings.TProxyListen}}" placeholder=":1082">
+        <span class="hint">Requires CAP_NET_ADMIN and nftables rules. See scripts/nftables-tproxy.sh.</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Default routing</h2></div>
+    <div class="form-grid">
+      <label>Default action
+        <select name="default_action">
+          <option value="direct" {{if eq .Data.Settings.DefaultAction "direct"}}selected{{end}}>direct</option>
+          <option value="proxy" {{if eq .Data.Settings.DefaultAction "proxy"}}selected{{end}}>proxy</option>
+          <option value="block" {{if eq .Data.Settings.DefaultAction "block"}}selected{{end}}>block</option>
+        </select>
+      </label>
+      <label>Default upstream
+        <select name="default_upstream_id">
+          <option value="0" {{if eq .Data.Settings.DefaultUpstreamID 0}}selected{{end}}>— none —</option>
+          {{range .Data.Upstreams}}
+          <option value="{{.ID}}" {{if eq .ID $.Data.Settings.DefaultUpstreamID}}selected{{end}}>{{.Name}} ({{typeLabel .Type}})</option>
+          {{end}}
+        </select>
+      </label>
+      <label>Health check target
+        <input type="text" name="health_target" value="{{.Data.Settings.HealthTarget}}" placeholder="1.1.1.1:443">
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>WireGuard / wireproxy</h2></div>
+    <div class="form-grid">
+      <label>wireproxy binary
+        <input type="text" name="wireproxy_binary" value="{{.Data.Settings.WireproxyBinary}}" placeholder="wireproxy">
+      </label>
+      <label>wireproxy data directory
+        <input type="text" name="wireproxy_data_dir" value="{{.Data.Settings.WireproxyDataDir}}" placeholder="wireproxy">
+        <span class="hint">Relative paths are resolved against the IDIPS data directory.</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>GeoIP / admin</h2></div>
+    <div class="form-grid">
+      <label>GeoIP City database
+        <input type="text" name="geoip_city_db" value="{{.Data.Settings.GeoIPCityDB}}" placeholder="/data/GeoLite2-City.mmdb">
+      </label>
+      <label>GeoIP ASN database
+        <input type="text" name="geoip_asn_db" value="{{.Data.Settings.GeoIPASNDB}}" placeholder="/data/GeoLite2-ASN.mmdb">
+      </label>
+      <label>Admin listen
+        <input type="text" name="admin_listen" value="{{.Data.Settings.AdminListen}}" placeholder=":8080">
+      </label>
+      <label>Admin TLS certificate
+        <input type="text" name="admin_tls_cert" value="{{.Data.Settings.AdminTLSCert}}" placeholder="/data/tls/admin.crt">
+      </label>
+      <label>Admin TLS key
+        <input type="text" name="admin_tls_key" value="{{.Data.Settings.AdminTLSKey}}" placeholder="/data/tls/admin.key">
+      </label>
+      <label>API bearer token
+        <input type="password" name="api_token" value="{{.Data.Settings.APIToken}}" autocomplete="new-password">
+        <span class="hint">Optional. Use Authorization: Bearer &lt;token&gt; for /api/*. Leave empty to require a UI session.</span>
+      </label>
+      <label>Log level
+        <select name="log_level">
+          <option value="debug" {{if eq .Data.Settings.LogLevel "debug"}}selected{{end}}>debug</option>
+          <option value="info" {{if eq .Data.Settings.LogLevel "info"}}selected{{end}}>info</option>
+          <option value="warn" {{if eq .Data.Settings.LogLevel "warn"}}selected{{end}}>warn</option>
+          <option value="error" {{if eq .Data.Settings.LogLevel "error"}}selected{{end}}>error</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button class="button" type="submit">Save settings</button>
+      <span class="muted small">Listener and TLS changes require a service restart. Other settings apply immediately.</span>
+    </div>
+  </section>
+</form>
+{{end}}

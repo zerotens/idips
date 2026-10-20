@@ -1,0 +1,40 @@
+IDIPS has been deployed.
+
+Admin UI / API:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get -n {{ .Release.Namespace }} svc {{ include "idips.fullname" . }} -o jsonpath='{.spec.ports[?(@.name=="admin")].nodePort}')
+  echo "http://$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}'):$NODE_PORT"
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  kubectl get -n {{ .Release.Namespace }} svc {{ include "idips.fullname" . }} -w
+{{- else }}
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "idips.fullname" . }} 8080:{{ (index .Values.service.ports 0).port }}
+  Then open http://127.0.0.1:8080
+{{- end }}
+
+Bootstrap credentials:
+  Username: {{ .Values.auth.adminUser }}
+{{- if .Values.auth.existingSecret }}
+  Password: from existing Secret {{ .Values.auth.existingSecret }} (key IDIPS_ADMIN_PASSWORD)
+{{- else if .Values.auth.adminPassword }}
+  Password: the value of auth.adminPassword
+{{- else }}
+  kubectl get secret -n {{ .Release.Namespace }} {{ include "idips.secretName" . }} -o jsonpath='{.data.IDIPS_ADMIN_PASSWORD}' | base64 -d
+{{- end }}
+
+Important:
+- Change the admin password after the first login.
+- The admin credentials are only read when the database has no admin yet.
+- DNS listens on port 53 inside the container. The chart grants NET_BIND_SERVICE
+  and runs as root by default; change the IDIPS settings and this chart together
+  if you want to use high ports.
+- If you enable TLS for the admin listener in IDIPS, update the probes to use
+  HTTPS or tcpSocket, otherwise readiness/liveness checks will fail.
+- SQLite only supports one replica. Do not scale this Deployment.
+- TPROXY needs hostNetwork, NET_ADMIN/NET_RAW and node-level nftables rules.
+  Set tproxy.enabled=true and hostNetwork=true, then run
+  scripts/nftables-tproxy.sh on the node.

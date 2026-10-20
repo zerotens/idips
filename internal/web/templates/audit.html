@@ -1,0 +1,18 @@
+{{define "content"}}
+<div class="panel">
+  <div class="panel-head">
+    <h2>Audit log</h2>
+    <span class="muted small">Latest 500 entries</span>
+  </div>
+  {{if .Data.Entries}}
+  <table class="table">
+    <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead>
+    <tbody>
+    {{range .Data.Entries}}
+      <tr><td class="muted">{{fmtTime .Time}}</td><td>{{.Actor}}</td><td>{{.Action}}</td><td class="muted">{{.Detail}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">No audit entries.</p>{{end}}
+</div>
+{{end}}

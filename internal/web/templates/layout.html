@@ -1,0 +1,53 @@
+{{define "layout"}}
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · IDIPS</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">ID</div>
+      <div>
+        <div class="brand-name">IDIPS</div>
+        <div class="brand-sub">Intelligent DNS &amp; Proxy</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="{{if eq .Active "dashboard"}}active{{end}}" href="/">Dashboard</a>
+      <a class="{{if eq .Active "upstreams"}}active{{end}}" href="/upstreams">Upstreams</a>
+      <a class="{{if eq .Active "rules"}}active{{end}}" href="/rules">Routing rules</a>
+      <a class="{{if eq .Active "leases"}}active{{end}}" href="/leases">Fake-IP leases</a>
+      <a class="{{if eq .Active "settings"}}active{{end}}" href="/settings">Settings</a>
+      <a class="{{if eq .Active "audit"}}active{{end}}" href="/audit">Audit log</a>
+      <a class="{{if eq .Active "account"}}active{{end}}" href="/account">Account</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div>v{{.Version}}</div>
+      <div class="muted">{{.Admin}}</div>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="link-button" type="submit">Logout</button>
+      </form>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <h1>{{.Title}}</h1>
+      <div class="topbar-actions">
+        <a class="button secondary" href="/api/health" target="_blank" rel="noreferrer">Health</a>
+      </div>
+    </header>
+    {{if .Msg}}<div class="flash ok">{{.Msg}}</div>{{end}}
+    {{if .Err}}<div class="flash bad">{{.Err}}</div>{{end}}
+    {{template "content" .}}
+  </main>
+</div>
+</body>
+</html>
+{{end}}

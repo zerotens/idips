@@ -1,0 +1,22 @@
+services:
+  idips:
+    build: .
+    container_name: idips
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "1080:1080"
+      - "8081:8081"
+      - "5353:53/udp"
+      - "5353:53/tcp"
+    environment:
+      IDIPS_ADMIN_USER: admin
+      IDIPS_ADMIN_PASSWORD: change-me-before-first-start
+      IDIPS_LOG_LEVEL: info
+    volumes:
+      - ./data:/data
+    # For TPROXY, use host networking and add NET_ADMIN. Example:
+    # network_mode: host
+    # cap_add:
+    #   - NET_ADMIN
+    #   - NET_RAW

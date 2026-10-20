@@ -1,0 +1,45 @@
+{{define "content"}}
+<div class="panel">
+  <div class="panel-head">
+    <h2>Routing rules</h2>
+    <a class="button" href="/rules/new">New rule</a>
+  </div>
+  <p class="muted small">Rules are evaluated by ascending priority. All configured match fields must match (AND). If a proxy upstream is down, evaluation continues with the next matching rule.</p>
+  {{if .Data.Rules}}
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Name</th><th>Match</th><th>Action</th><th>Upstream</th><th>Enabled</th><th></th></tr>
+    </thead>
+    <tbody>
+    {{range .Data.Rules}}
+      <tr>
+        <td class="mono">{{.Rule.Priority}}</td>
+        <td><a href="/rules/{{.Rule.ID}}/edit">{{.Rule.Name}}</a></td>
+        <td class="match-cell">
+          {{if .Rule.MatchDomain}}<div><span class="muted">domain {{.Rule.DomainMode}}:</span> {{.Rule.MatchDomain}}</div>{{end}}
+          {{if .Rule.MatchCIDR}}<div><span class="muted">ip:</span> {{.Rule.MatchCIDR}}</div>{{end}}
+          {{if .Rule.MatchGeoIP}}<div><span class="muted">geo:</span> {{.Rule.MatchGeoIP}}</div>{{end}}
+          {{if .Rule.MatchASN}}<div><span class="muted">asn:</span> {{.Rule.MatchASN}}</div>{{end}}
+          {{if .Rule.MatchClientCIDR}}<div><span class="muted">client:</span> {{.Rule.MatchClientCIDR}}</div>{{end}}
+          {{if .Rule.MatchPort}}<div><span class="muted">port:</span> {{.Rule.MatchPort}}</div>{{end}}
+          {{if and (not .Rule.MatchDomain) (not .Rule.MatchCIDR) (not .Rule.MatchGeoIP) (not .Rule.MatchASN) (not .Rule.MatchClientCIDR) (not .Rule.MatchPort)}}<span class="badge">catch-all</span>{{end}}
+        </td>
+        <td><span class="badge">{{actionLabel .Rule.Action}}</span></td>
+        <td>{{if .UpstreamName}}{{.UpstreamName}}{{else}}<span class="muted">-</span>{{end}}</td>
+        <td>{{yesno .Rule.Enabled}}</td>
+        <td class="actions">
+          <a class="button secondary small" href="/rules/{{.Rule.ID}}/edit">Edit</a>
+          <form method="post" action="/rules/{{.Rule.ID}}/delete" onsubmit="return confirm('Delete this rule?')">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <button class="button danger small" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty">No rules yet. Add a rule, or configure a default action in Settings.</p>
+  {{end}}
+</div>
+{{end}}

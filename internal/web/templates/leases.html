@@ -1,0 +1,51 @@
+{{define "content"}}
+<div class="cards">
+  <div class="card">
+    <div class="card-label">Active leases</div>
+    <div class="card-value">{{.Data.Count}}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Pool</div>
+    <div class="card-value mono">{{.Data.Stats.CIDR}}</div>
+    <div class="muted small">{{.Data.Stats.Used}} used · {{.Data.Stats.Free}} free</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Lease TTL</div>
+    <div class="card-value">{{.Data.LeaseTTL}}s</div>
+    <div class="muted small">sliding lease, renewed on DNS lookup and connection</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>Leases</h2>
+    <form method="get" action="/leases" class="search">
+      <input type="text" name="q" value="{{.Data.Search}}" placeholder="Search domain or fake IP">
+      <button class="button secondary" type="submit">Search</button>
+    </form>
+  </div>
+  {{if .Data.Leases}}
+  <table class="table">
+    <thead><tr><th>Fake IP</th><th>Target domain</th><th>Resolved IPs</th><th>Expires</th><th></th></tr></thead>
+    <tbody>
+    {{range .Data.Leases}}
+      <tr>
+        <td class="mono">{{.FakeIP}}</td>
+        <td>{{.TargetDomain}}</td>
+        <td class="mono muted">{{if .TargetIPs}}{{join .TargetIPs ", "}}{{else}}-{{end}}</td>
+        <td>{{fmtTime .ExpiresAt}}<br><span class="muted small">{{remaining .ExpiresAt}}</span></td>
+        <td class="actions">
+          <form method="post" action="/leases/{{.ID}}/delete" onsubmit="return confirm('Revoke this lease?')">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <button class="button danger small" type="submit">Revoke</button>
+          </form>
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty">No leases matched.</p>
+  {{end}}
+</div>
+{{end}}

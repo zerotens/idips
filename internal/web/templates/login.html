@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login · IDIPS</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-body">
+  <main class="login-card">
+    <div class="brand">
+      <div class="brand-mark">ID</div>
+      <div>
+        <div class="brand-name">IDIPS</div>
+        <div class="brand-sub">Intelligent DNS &amp; Proxy</div>
+      </div>
+    </div>
+    <h1>Sign in</h1>
+    {{if .Error}}<div class="flash bad">{{.Error}}</div>{{end}}
+    <form method="post" action="/login" class="stack">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <label>Username
+        <input type="text" name="username" autocomplete="username" autofocus required>
+      </label>
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="button" type="submit">Sign in</button>
+    </form>
+    <p class="muted small">Bootstrap credentials are configured via IDIPS_ADMIN_USER / IDIPS_ADMIN_PASSWORD or default to admin/admin.</p>
+  </main>
+</body>
+</html>

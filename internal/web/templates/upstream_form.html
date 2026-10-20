@@ -1,0 +1,58 @@
+{{define "content"}}
+<div class="panel">
+  <div class="panel-head">
+    <h2>{{if .Data.IsNew}}New upstream{{else}}Edit upstream{{end}}</h2>
+    <a class="button secondary" href="/upstreams">Back</a>
+  </div>
+  <form method="post" action="{{if .Data.IsNew}}/upstreams{{else}}/upstreams/{{.Data.Upstream.ID}}{{end}}" class="form-grid">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+
+    <label>Name
+      <input type="text" name="name" value="{{.Data.Upstream.Name}}" required placeholder="e.g. Netflix DE">
+    </label>
+
+    <label>Type
+      <select name="type">
+        {{range .Data.Types}}
+        <option value="{{.}}" {{if eq . $.Data.Upstream.Type}}selected{{end}}>{{typeLabel .}}</option>
+        {{end}}
+      </select>
+    </label>
+
+    <label>Address (host:port)
+      <input type="text" name="address" value="{{.Data.Upstream.Address}}" placeholder="127.0.0.1:1080">
+      <span class="hint">SOCKS5/HTTP endpoint. For WireGuard this is managed locally by wireproxy.</span>
+    </label>
+
+    <label>Priority
+      <input type="number" name="priority" value="{{.Data.Upstream.Priority}}">
+      <span class="hint">Lower values are preferred for health checks and failover.</span>
+    </label>
+
+    <label>Username
+      <input type="text" name="username" value="{{.Data.Upstream.Username}}" autocomplete="off">
+    </label>
+
+    <label>Password
+      <input type="password" name="password" value="" autocomplete="new-password" placeholder="{{if .Data.IsNew}}optional{{else}}leave blank to keep existing{{end}}">
+      {{if not .Data.IsNew}}
+      <span class="hint"><input type="checkbox" name="clear_password" value="1"> clear stored password</span>
+      {{end}}
+    </label>
+
+    <label class="full">WireGuard INI config (only for type WireGuard)
+      <textarea name="wg_config" rows="16" class="mono" placeholder="{{.Data.SampleWG}}">{{.Data.Upstream.WGConfig}}</textarea>
+      <span class="hint">Standard wg-quick / WireGuard INI format ([Interface] + [Peer]). Private keys are encrypted at rest. IDIPS generates a wireproxy config and runs it as a supervised subprocess.</span>
+    </label>
+
+    <label class="inline full">
+      <input type="checkbox" name="enabled" value="1" {{if .Data.Upstream.Enabled}}checked{{end}}> enabled
+    </label>
+
+    <div class="form-actions full">
+      <button class="button" type="submit">Save upstream</button>
+      <a class="button secondary" href="/upstreams">Cancel</a>
+    </div>
+  </form>
+</div>
+{{end}}
